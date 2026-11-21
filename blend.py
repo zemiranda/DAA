@@ -44,10 +44,10 @@ print("sem mult  (metade a):", round(mf1(P_oof[a], y[a]), 4), "| com mult de b:"
 m_all = fit_mult(P_oof, y)
 print("OOF blend:", round(mf1(P_oof), 4), "| com mult (otimista):", round(mf1(P_oof * m_all), 4))
 
-pred = (P_te * m_all).argmax(1)
+pred = P_te.argmax(1)   # SEM multiplicadores de classe: nao generalizam (ver validacao por metades)
 sub = pd.read_csv("example_submission_10.csv")
 assert len(sub) == len(pred) == 3655
 sub["AGE_RANGE"] = pred
-sub.to_csv(f"{OUT}/submission_v1.csv", index=False)
+sub.to_csv(f"{OUT}/submission_blend.csv", index=False)
 print(sub.AGE_RANGE.value_counts().sort_index().to_dict())
 np.save(f"{OUT}/oof_blend.npy", P_oof); np.save(f"{OUT}/class_mult.npy", m_all)
