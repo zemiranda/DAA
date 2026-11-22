@@ -7,8 +7,6 @@ Os resultados intermédios ficam em ./out/ (cada passo lê o que o anterior grav
 | # | Comando | O que faz | Tempo (1 CPU) |
 |---|---------|-----------|---------------|
 | 1 | python pipeline.py | limpeza, features, LightGBM base (lgb_fe) | ~3 min |
-
---- Poderá faltar o fe2.py ---------------------------------------------
 | 2 | python models2.py | regressão logística (lr) + random forest (rf) | ~2,5 min |
 | 3 | python tune_stack.py search 0 8 | random search do LightGBM (grava out/trials.json) | ~4 min |
 | 4 | python tune_stack.py lgb | LightGBM afinado (lgb_tuned) | ~2,5 min |
