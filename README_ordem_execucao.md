@@ -1,25 +1,21 @@
-# DAA 2026/27 – ordem de execução
+# DAA 2026/27 – Ordem de Execução
 
-Colocar na mesma pasta: dataset_train.csv, dataset_test_X.csv, example_submission_10.csv.
-Dependências: pandas numpy scipy scikit-learn lightgbm xgboost catboost
-Os resultados intermédios ficam em ./out/ (cada passo lê o que o anterior gravou).
+Colocar os dados brutos em `data/raw/`: `dataset_train.csv`, `dataset_test_X.csv`, `example_submission_10.csv`.
+Instalar dependências: `pip install -r requirements.txt` (ou usar `.venv/bin/python`).
 
-| # | Comando | O que faz | Tempo (1 CPU) |
-|---|---------|-----------|---------------|
-| 1 | python pipeline.py | limpeza, features, LightGBM base (lgb_fe) | ~3 min |
-| 2 | python models2.py | regressão logística (lr) + random forest (rf) | ~2,5 min |
-| 3 | python tune_stack.py search 0 8 | random search do LightGBM (grava out/trials.json) | ~4 min |
-| 4 | python tune_stack.py lgb | LightGBM afinado (lgb_tuned) | ~2,5 min |
-| 5 | python tune_stack.py et | ExtraTrees (et) | ~3 min |
-| 6 | python new_models.py xgb 0 5 ; python new_models.py xgb merge | XGBoost | ~1 min |
-| 7 | python new_models.py cat 0 5 ; python new_models.py cat merge | CatBoost | ~2 min |
-| 8 | python new_models.py mlp 0 5 ; python new_models.py mlp merge | MLP | ~1 min |
-| 9 | python new_models.py ord 0 5 ; python new_models.py ord merge | regressão ordinal | segundos |
-| 10 | python stack_final.py | stacking, compara conjuntos, grava out/submission_stack.csv | ~1 min |
-| 11 | python analysis.py importance ; python analysis.py anomalies | importância das variáveis e anomalias supervisionadas | ~3 min |
-| 12 | python unsupervised.py ae ; ... kmeans ; ... dbscan | autoencoder, K-Means, DBSCAN | ~3 min |
+## Comandos Principais (`main.py` / `Makefile`)
 
-Notas:
-- blend.py é opcional (blend simples por pesos); o stacking de stack_final.py substitui-o.
-- tune_stack.py stack (etapa antiga de stacking) também é opcional.
-- A ordem importa: 1 e 2 antes de tudo; 3→4; 10 precisa dos passos 1–9; 11 e 12 precisam de 1 e 10.
+| # | Comando | O que faz |
+|---|---|---|
+| 1 | `python main.py preprocess` | Limpeza sem *data leakage*, engenharia de variáveis (`fe2` + flags MNAR + ciclo de vida), gera `data/processed/{X_train,X_test}.parquet`, `y_train.npy` e *folds* congelados `folds.npy` |
+| 2 | `python main.py tune --trials 8` | *(Opcional)* Random search do LightGBM com atualização de `out/trials.json` |
+| 3 | `python main.py train --all` | Treina os 9 modelos base (`lgb_fe`, `lgb_tuned`, `xgb`, `cat`, `rf`, `et`, `lr`, `mlp`, `ord`) nos mesmos *folds*, gravando em `out/oof/` e `out/preds/` |
+| 4 | `python main.py stack` | Meta-modelo logístico sobre log-probabilidades OOF + validação OOF de multiplicadores Macro F1, gera `submissions/submission_stack.csv` |
+| 5 | `python main.py report --all` | Importância de variáveis, anomalias supervisionadas, autoencoder, K-Means, DBSCAN, caracterização e figuras em `out/report/` |
+
+### Opções avançadas de treino
+- Treinar apenas um modelo: `python main.py train --model lgb_tuned`
+- Treino hierárquico (`<55` vs `55+`): `python main.py train --model hlgb hxgb hcat hrf`
+- Treino por *folds* (retomável): `python main.py train --model xgb --folds 0 1 2` seguido de `python main.py train --model xgb --folds 3 4` e `python main.py train --model xgb --merge`
+- Média multi-semente: `python main.py train --model xgb --seeds 1 2 3`
+- Tudo automatizado via `Makefile`: `make all`
